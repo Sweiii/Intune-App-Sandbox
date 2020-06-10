@@ -1,6 +1,6 @@
 #params
 params(
-    [String]$PackagePath
+[String]$PackagePath
 )
 $SandboxOperatingFolder = 'C:\SandboxEnvironment' 
 $SandboxFile = "$((get-item $PackagePath).BaseName).wsb"
@@ -14,24 +14,28 @@ $FullStartupPath = """$FullStartupPath"""
 
 If (!(Test-Path -Path $SandboxOperatingFolder -PathType Container))
 {
-    New-Item -Path $SandboxOperatingFolder -ItemType Directory
+New-Item -Path $SandboxOperatingFolder -ItemType Directory
 }
 Function New-WSB
 {
-    Param
-    (
-        [String]$CommandtoRun	
-    )	
-		 
-    new-item -Path $SandboxOperatingFolder -Name $SandboxFile -type file -force | out-null
-    $Config = @"
+Param
+(
+    [String]$CommandtoRun	
+)	
+        
+new-item -Path $SandboxOperatingFolder -Name $SandboxFile -type file -force | out-null
+$Config = @"
 "<Configuration>"
 "<VGpu>Enable</VGpu>"
 "<Networking>Enable</Networking>"
 "<MappedFolders>"	
 "<MappedFolder>"	
 "<HostFolder>$((get-item $PackagePath).Directory)</HostFolder>"	
-"<ReadOnly>false</ReadOnly>"	
+"<ReadOnly>true</ReadOnly>"	
+"</MappedFolder>"
+"<MappedFolder>"	
+"<HostFolder>C:\SandboxEnvironment</HostFolder>"	
+"<ReadOnly>true</ReadOnly>"	
 "</MappedFolder>"	
 "</MappedFolders>"	
 "<LogonCommand>"	
@@ -39,13 +43,20 @@ Function New-WSB
 "</LogonCommand>"	
 "</Configuration>"
 "@
-    Set-Content -Path $SandboxOperatingFolder -Name $SandboxFile -Value $Config
+Set-Content -Path $SandboxOperatingFolder -Name $SandboxFile -Value $Config
 }
 
-	
-$ScriptBlock = {
 
-    $FullStartupPath
+$ScriptBlock = {
+$OperatingFolder = 'C:\Temp'
+$FullStartupPath
+
+If (!(Test-Path -Path $OperatingFolder -PathType Container))
+{
+    New-Item -Path $OperatingFolder -ItemType Directory
+}
+Copy-Item -Path $FullStartupPath -Destination $OperatingFolder
+Start-Process -FilePath $SandboxDesktopPath\SandboxEnvironment\IntuneWinAppUtilDecoder.exe -ArgumentList "$OperatingFolder\$SandboxFile"
 }
 $Script:Startup_Command = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -sta -WindowStyle Hidden -noprofile -executionpolicy unrestricted -Command $ScriptBlock"			
 
