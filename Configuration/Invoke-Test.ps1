@@ -2,7 +2,7 @@
 params(
     [String]$PackagePath
 )
-$SandboxOperatingFolder = 'C:\SandboxEnvironment'
+$SandboxOperatingFolder = 'C:\SandboxEnvironment' 
 $SandboxFile = "$((get-item $PackagePath).BaseName).wsb"
 $FolderPath = Split-Path (Split-Path "$ScriptPath" -Parent) -Leaf
 $FileName = (get-item $ScriptPath).Name
