@@ -24,7 +24,7 @@ Function New-WSB
     (
         [String]$CommandtoRun	
     )	
-        
+		
     new-item -Path $SandboxOperatingFolder -Name $SandboxFile -type file -force | out-null
     $Config = @"
 <Configuration>
@@ -52,18 +52,20 @@ Function New-WSB
 $ScriptBlock = @"
 If (!(Test-Path -Path $SandboxTempFolder -PathType Container))
 {
-    New-Item -Path $SandboxTempFolder -ItemType Directory
+	New-Item -Path $SandboxTempFolder -ItemType Directory
 }
 Copy-Item -Path $FullStartupPath -Destination $SandboxTempFolder
-Start-Process -FilePath $SandboxDesktopPath\bin\IntuneWinAppUtilDecoder.exe -ArgumentList "$SandboxTempFolder\$FileName /s"
-Start-Sleep 2
-Move-Item -Path "$SandboxTempFolder\$FileName.decoded" -Destination "$SandboxTempFolder\$($FileName -replace '.intunewin','.zip')" -Force
-Expand-Archive -Path "$SandboxTempFolder\$($FileName -replace '.intunewin','.zip')" -Destination $SandboxTempFolder -Force
-Remove-Item -Path "$SandboxTempFolder\$($FileName -replace '.intunewin','.zip')" -Force
-Start-Process -FilePath $SandboxDesktopPath\bin\PsExec64.exe -ArgumentList "-accepteula -s '$SandboxTempFolder\$($FileName -replace '.intunewin','.ps1')'"
+`$Decoder = Start-Process -FilePath $SandboxDesktopPath\bin\IntuneWinAppUtilDecoder.exe -ArgumentList "$SandboxTempFolder\$FileName /s" -NoNewWindow -PassThru -Wait
+
+Rename-Item -Path "$SandboxTempFolder\$FileName.decoded" -NewName `'$($FileName -replace '.intunewin','.zip')`' -Force;
+Expand-Archive -Path "$SandboxTempFolder\$($FileName -replace '.intunewin','.zip')" -Destination $SandboxTempFolder -Force;
+Remove-Item -Path "$SandboxTempFolder\$($FileName -replace '.intunewin','.zip')" -Force;
+Start-Process powershell.exe -noprofile -executionpolicy bypass -File `'$SandboxTempFolder\$($FileName -replace '.intunewin','.ps1')`' -NoNewWindow -PassThru -Wait
 "@
+
 New-Item -Path $SandboxOperatingFolder\bin -Name LogonCommand.ps1 -ItemType File -Value $ScriptBlock -Force | Out-Null
-$Script:Startup_Command = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -sta -WindowStyle Hidden -noprofile -executionpolicy unrestricted -File $SandboxDesktopPath\bin\LogonCommand.ps1"			
+
+$Script:Startup_Command = "powershell.exe -sta -WindowStyle Hidden -noprofile -executionpolicy bypass -File $SandboxDesktopPath\bin\LogonCommand.ps1"
 
 New-WSB -CommandtoRun $Startup_Command		
 
