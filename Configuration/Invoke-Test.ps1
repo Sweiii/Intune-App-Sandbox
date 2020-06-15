@@ -60,7 +60,8 @@ Copy-Item -Path $FullStartupPath -Destination $SandboxTempFolder
 Rename-Item -Path "$SandboxTempFolder\$FileName.decoded" -NewName `'$($FileName -replace '.intunewin','.zip')`' -Force;
 Expand-Archive -Path "$SandboxTempFolder\$($FileName -replace '.intunewin','.zip')" -Destination $SandboxTempFolder -Force;
 Remove-Item -Path "$SandboxTempFolder\$($FileName -replace '.intunewin','.zip')" -Force;
-Start-Process powershell.exe -noprofile -executionpolicy bypass -File `'$SandboxTempFolder\$($FileName -replace '.intunewin','.ps1')`' -NoNewWindow -PassThru -Wait
+`$Installer = Start-Process powershell -ArgumentList '-executionpolicy bypass -File "$SandboxTempFolder\$($FileName -replace '.intunewin','.ps1')"' -NoNewWindow -PassThru -Wait
+"Installation exit code: `$(`$Installer.ExitCode)" | Out-File c:\Temp\InstallExitCode.log 
 "@
 
 New-Item -Path $SandboxOperatingFolder\bin -Name LogonCommand.ps1 -ItemType File -Value $ScriptBlock -Force | Out-Null
