@@ -3,16 +3,18 @@ param(
     [String]$PackagePath
 )
 
-$SandboxOperatingFolder = 'C:\SandboxEnvironment' 
+$SandboxOperatingFolder = 'C:\SandboxEnvironment'
 $SandboxFile = "$((get-item $PackagePath).BaseName).wsb"
 $FolderPath = Split-Path (Split-Path "$PackagePath" -Parent) -Leaf
 $FileName = (get-item $PackagePath).Name
+$FileNameZIP = $($FileName -replace '.intunewin', '.zip')
 
 $SandboxDesktopPath = "C:\Users\WDAGUtilityAccount\Desktop"
-$SandboxTempFolder = 'C:\Temp' 
+$SandboxTempFolder = 'C:\Temp'
 $SandboxSharedPath = "$SandboxDesktopPath\$FolderPath"
 $FullStartupPath = "$SandboxSharedPath\$FileName"
 $FullStartupPath = """$FullStartupPath"""
+#endregion
 
 If (!(Test-Path -Path $SandboxOperatingFolder -PathType Container))
 {
@@ -22,27 +24,27 @@ Function New-WSB
 {
     Param
     (
-        [String]$CommandtoRun	
-    )	
-		
+        [String]$CommandtoRun
+    )
+
     new-item -Path $SandboxOperatingFolder -Name $SandboxFile -type file -force | out-null
     $Config = @"
 <Configuration>
 <VGpu>Enable</VGpu>
 <Networking>Enable</Networking>
-<MappedFolders>	
-<MappedFolder>	
-<HostFolder>$((get-item $PackagePath).Directory)</HostFolder>	
-<ReadOnly>true</ReadOnly>	
+<MappedFolders>
+<MappedFolder>
+<HostFolder>$((get-item $PackagePath).Directory)</HostFolder>
+<ReadOnly>true</ReadOnly>
 </MappedFolder>
-<MappedFolder>	
-<HostFolder>C:\SandboxEnvironment\bin</HostFolder>	
-<ReadOnly>true</ReadOnly>	
-</MappedFolder>	
-</MappedFolders>	
-<LogonCommand>	
-<Command>$CommandtoRun</Command>	
-</LogonCommand>	
+<MappedFolder>
+<HostFolder>C:\SandboxEnvironment\bin</HostFolder>
+<ReadOnly>true</ReadOnly>
+</MappedFolder>
+</MappedFolders>
+<LogonCommand>
+<Command>$CommandtoRun</Command>
+</LogonCommand>
 </Configuration>
 "@
     Set-Content -Path "$SandboxOperatingFolder\$SandboxFile" -Value $Config
@@ -57,17 +59,22 @@ If (!(Test-Path -Path $SandboxTempFolder -PathType Container))
 Copy-Item -Path $FullStartupPath -Destination $SandboxTempFolder
 `$Decoder = Start-Process -FilePath $SandboxDesktopPath\bin\IntuneWinAppUtilDecoder.exe -ArgumentList "$SandboxTempFolder\$FileName /s" -NoNewWindow -PassThru -Wait
 
-Rename-Item -Path "$SandboxTempFolder\$FileName.decoded" -NewName `'$($FileName -replace '.intunewin','.zip')`' -Force;
-Expand-Archive -Path "$SandboxTempFolder\$($FileName -replace '.intunewin','.zip')" -Destination $SandboxTempFolder -Force;
-Remove-Item -Path "$SandboxTempFolder\$($FileName -replace '.intunewin','.zip')" -Force;
-`$Installer = Start-Process powershell -ArgumentList '-executionpolicy bypass -File "$SandboxTempFolder\$($FileName -replace '.intunewin','.ps1')"' -NoNewWindow -PassThru -Wait
-"Installation exit code: `$(`$Installer.ExitCode)" | Out-File c:\Temp\InstallExitCode.log 
+Rename-Item -Path "$SandboxTempFolder\$FileName.decoded" -NewName `'$FileNameZIP`' -Force;
+Expand-Archive -Path "$SandboxTempFolder\$FileNameZIP" -Destination $SandboxTempFolder -Force;
+Remove-Item -Path "$SandboxTempFolder\$FileNameZIP" -Force;
+
+# register script as scheduled task
+`$Trigger = New-ScheduledTaskTrigger -Once -At `$(Get-Date).AddMinutes(1)
+`$User = "SYSTEM"
+`$Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument '-ex bypass -File "$SandboxTempFolder\$($FileName -replace '.intunewin','.ps1')" -NoNewWindow -NonInteractive'
+`$Settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit "01:00"
+Register-ScheduledTask -TaskName "Install App" -Trigger `$Trigger -User `$User -Action `$Action -Settings `$Settings -Force
 "@
 
 New-Item -Path $SandboxOperatingFolder\bin -Name LogonCommand.ps1 -ItemType File -Value $ScriptBlock -Force | Out-Null
 
 $Script:Startup_Command = "powershell.exe -sta -WindowStyle Hidden -noprofile -executionpolicy bypass -File $SandboxDesktopPath\bin\LogonCommand.ps1"
 
-New-WSB -CommandtoRun $Startup_Command		
+New-WSB -CommandtoRun $Startup_Command
 
 Start-Process $SandboxOperatingFolder\$SandboxFile
