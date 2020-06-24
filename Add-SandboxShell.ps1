@@ -1,3 +1,4 @@
+#Requires -RunAsAdministrator
 $SandboxOperatingFolder = 'C:\SandboxEnvironment\bin'
 If (!(Test-Path -Path $SandboxOperatingFolder -PathType Container))
 {
