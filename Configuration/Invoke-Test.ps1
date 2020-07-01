@@ -66,14 +66,14 @@ Remove-Item -Path "$SandboxTempFolder\$FileNameZIP" -Force;
 # register script as scheduled task
 `$Trigger = New-ScheduledTaskTrigger -Once -At `$(Get-Date).AddMinutes(1)
 `$User = "SYSTEM"
-`$Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument '-ex bypass -File "$SandboxTempFolder\$($FileName -replace '.intunewin','.ps1')" -NoNewWindow -NonInteractive'
-`$Settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit "01:00"
+`$Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument '-ex bypass -command "$SandboxTempFolder\$($FileName -replace '.intunewin','.ps1')" -NoNewWindow -NonInteractive'
+`$Settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit "01:00" -AllowStartIfOnBatteries
 Register-ScheduledTask -TaskName "Install App" -Trigger `$Trigger -User `$User -Action `$Action -Settings `$Settings -Force
 "@
 
-New-Item -Path $SandboxOperatingFolder\bin -Name LogonCommand.ps1 -ItemType File -Value $ScriptBlock -Force | Out-Null
+New-Item -Path $SandboxOperatingFolder\bin -Name "$((get-item $PackagePath).BaseName)_LogonCommand.ps1" -ItemType File -Value $ScriptBlock -Force | Out-Null
 
-$Script:Startup_Command = "powershell.exe -sta -WindowStyle Hidden -noprofile -executionpolicy bypass -File $SandboxDesktopPath\bin\LogonCommand.ps1"
+$Script:Startup_Command = "powershell.exe -WindowStyle Hidden -noprofile -executionpolicy bypass -Command $SandboxDesktopPath\bin\$((get-item $PackagePath).BaseName)_LogonCommand.ps1"
 
 New-WSB -CommandtoRun $Startup_Command
 
