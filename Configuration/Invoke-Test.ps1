@@ -6,7 +6,7 @@ param(
 $SandboxOperatingFolder = 'C:\SandboxEnvironment'
 $SandboxFile = "$((get-item $PackagePath).BaseName).wsb"
 $FolderPath = Split-Path (Split-Path "$PackagePath" -Parent) -Leaf
-$FileName = (get-item $PackagePath).Name
+$FileName = (Get-Item $PackagePath).Name
 $FileNameZIP = $($FileName -replace '.intunewin', '.zip')
 
 $SandboxDesktopPath = "C:\Users\WDAGUtilityAccount\Desktop"
@@ -16,18 +16,16 @@ $FullStartupPath = "$SandboxSharedPath\$FileName"
 $FullStartupPath = """$FullStartupPath"""
 #endregion
 
-If (!(Test-Path -Path $SandboxOperatingFolder -PathType Container))
-{
+If (!(Test-Path -Path $SandboxOperatingFolder -PathType Container)) {
     New-Item -Path $SandboxOperatingFolder -ItemType Directory
 }
-Function New-WSB
-{
+Function New-WSB {
     Param
     (
         [String]$CommandtoRun
     )
 
-    new-item -Path $SandboxOperatingFolder -Name $SandboxFile -type file -force | out-null
+    New-Item -Path $SandboxOperatingFolder -Name $SandboxFile -type file -force | Out-Null
     $Config = @"
 <Configuration>
 <VGpu>Enable</VGpu>
@@ -73,7 +71,7 @@ Register-ScheduledTask -TaskName "Install App" -Trigger `$Trigger -User `$User -
 
 New-Item -Path $SandboxOperatingFolder\bin -Name "$((get-item $PackagePath).BaseName)_LogonCommand.ps1" -ItemType File -Value $ScriptBlock -Force | Out-Null
 
-$Script:Startup_Command = "powershell.exe -WindowStyle Hidden -noprofile -executionpolicy bypass -Command $SandboxDesktopPath\bin\$((get-item $PackagePath).BaseName)_LogonCommand.ps1"
+$Startup_Command = "powershell.exe -WindowStyle Hidden -noprofile -executionpolicy bypass -Command $SandboxDesktopPath\bin\$((get-item $PackagePath).BaseName)_LogonCommand.ps1"
 
 New-WSB -CommandtoRun $Startup_Command
 
